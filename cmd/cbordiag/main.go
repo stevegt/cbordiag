@@ -21,7 +21,11 @@ func main() {
 	}
 
 	// Diagnose the CBOR data
-	diagnosis, err := cbor.Diagnose(data)
+	dm, err := cbor.DiagOptions{
+		ByteStringText:         true,
+		ByteStringEmbeddedCBOR: true,
+	}.DiagMode()
+	diagnosis, err := dm.Diagnose(data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error diagnosing CBOR data: %v\n", err)
 		os.Exit(1)
