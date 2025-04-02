@@ -25,12 +25,16 @@ func main() {
 		ByteStringText:         true,
 		ByteStringEmbeddedCBOR: true,
 	}.DiagMode()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating Diagnose mode: %v\n", err)
+		os.Exit(1)
+	}
 	diagnosis, err := dm.Diagnose(data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error diagnosing CBOR data: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Print the diagnosis to stdout
 	fmt.Println(diagnosis)
+
 }

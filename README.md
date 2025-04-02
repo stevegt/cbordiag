@@ -1,12 +1,12 @@
 # CBOR Diagnostic Tool
 
-A simple command-line tool for diagnosing CBOR (Concise Binary Object Representation) data. This tool decodes CBOR input and provides a human-readable representation of the data structure.
+A simple command-line tool for diagnosing CBOR (Concise Binary Object Representation) data. This tool decodes CBOR input and provides a human-readable representation of the data structure with annotations explaining each element.
 
 ## Features
 
 - Reads CBOR data from standard input (stdin).
 - Decodes the CBOR data using the `github.com/fxamacker/cbor/v2` library's `Diagnose()` function.
-- Outputs the decoded result to standard output (stdout).
+- Outputs the decoded result with annotations to standard output (stdout).
 
 ## Installation
 
@@ -58,7 +58,13 @@ Suppose you have a CBOR-encoded file named `data.cbor`:
 cat data.cbor | ./cbordiag
 ```
 
-The tool will output a human-readable diagnosis of the CBOR data structure.
+The tool will output a human-readable diagnosis of the CBOR data structure with annotations. For example:
+
+```
+0(foo)   # Major Type 0: Unsigned Integer or Simple Value
+1(bar)   # Major Type 1: Negative Integer
+2(42)    # Major Type 2: Byte String
+```
 
 ## Dependencies
 
