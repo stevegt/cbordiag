@@ -61,10 +61,17 @@ cat data.cbor | ./cbordiag
 The tool will output a human-readable diagnosis of the CBOR data structure with annotations. For example:
 
 ```
-0(foo)   # Major Type 0: Unsigned Integer or Simple Value
-1(bar)   # Major Type 1: Negative Integer
-2(42)    # Major Type 2: Byte String
+0(foo)       # Major Type 0: Unsigned Integer or Simple Value
+1(bar)       # Major Type 1: Negative Integer
+2(42)        # Major Type 2: Byte String
+3(text)      # Major Type 3: UTF-8 String
+4(array)     # Major Type 4: Array
+5(map)       # Major Type 5: Map
+6(tagged)    # Major Type 6: Tag
+7(simple)    # Major Type 7: Floating Point Numbers and Simple Data Types
 ```
+
+Each line represents a CBOR data element with an annotation explaining its type.
 
 ## Dependencies
 
