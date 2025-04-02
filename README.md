@@ -1,18 +1,18 @@
 # CBOR Diagnostic Tool
 
-A command-line tool for diagnosing CBOR data with annotated output. Supports binary, hex, and standard input formats with extended diagnostic explanations.
+A command-line tool for CBOR diagnostics with annotated output, inspired by RFC 8949 EDN and RFC 8610 extensions. Implements a zero-dependency CBOR parser with type annotations.
 
 ## Features
 
-- Input formats supported:
+- Input formats:
   - Raw binary CBOR
-  - Hexadecimal encoded CBOR
+  - Hexadecimal strings
   - Standard input streams
-- Output features:
-  - Extended Diagnostic Notation (EDN) with type annotations
-  - Structured breakdown of CBOR major types
-  - Embedded CBOR decoding for nested structures
-- Validation of Deterministic CBOR (dCBOR)
+- Diagnostic features:
+  - Annotated hex output with type metadata
+  - Major type breakdown (RFC 8949 §3)
+  - Embedded CBOR decoding (RFC 8610 §G.3)
+  - Nested structure visualization
 
 ## Installation
 
@@ -22,20 +22,20 @@ cd cbordiag
 go build -o cbordiag ./cmd/cbordiag
 ```
 
-## Usage 
+## Usage
 
 ```bash
-# Read from stdin with hex input
-echo a16568656c6c6f65776f726c64 | ./cbordiag
+# Process hex input
+echo a26161016162820203 | ./cbordiag
 
-# Read binary file
+# Read binary file 
 ./cbordiag < data.cbor
 
-# Piped conversion example
-cbor-generator | ./cbordiag
+# Validate dCBOR
+cbor-generator | ./cbordiag -v
 ```
 
-## Annotated Output Example
+## Annotation Example
 
 Input (hex):
 ```
@@ -71,7 +71,7 @@ a1                 # MAP (1 pair)
 
 ## Options
 
-| Flag | Description               |
-|------|---------------------------|
-| -a   | Annotation style (compact/verbose) |
-| -h   | Show help                 |
+| Flag | Description                |
+|------|----------------------------|
+| -i   | Input format (bin/hex/auto)|
+| -a   | Annotation depth (1-99)    |
