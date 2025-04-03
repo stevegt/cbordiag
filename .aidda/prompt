@@ -7,9 +7,7 @@ Representation) data.  We can reference existing annotated diagnostic
 parsers in Ruby and Rust for inspiration.
 
 Next steps:  
-- move most of cmd/cbordiag/main.go to a cbordiag.Parse() function
-- add test cases for the cbordiag.Parse() function
-- add more comments to the code
+- write a README.md with usage instructions for both CLI and library
 
 Always return the complete file -- do not stub, summarize, or replace
 code with comments
@@ -19,6 +17,4 @@ In:
     cbordiag.go
     cbordiag_test.go
 Out: 
-    cmd/cbordiag/main.go
-    cbordiag.go
-    cbordiag_test.go
+    README.md

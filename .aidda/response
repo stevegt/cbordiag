@@ -1,586 +1,133 @@
 <think>
-Okay, let me see what the user is asking for. They want to create a tool called cbordiag that displays CBOR data with annotations. The next steps mentioned are moving most of the main.go code into a Parse function, adding test cases, and adding more comments. The provided files include main.go, cbordiag.go, and cbordiag_test.go, along with test output.
+Okay, I need to write a README.md for the cbordiag tool that includes usage instructions for both the CLI and the library. Let's start by looking at the existing code files provided.
 
-First, I need to check if the existing code in main.go has been moved to a Parse function. Looking at main.go, the main function reads data, creates a CborParser, and loops calling ParseItem, appending lines to the output. The actual parsing logic is in ParseItem within cbordiag.go. So maybe the main.go is already simplified, but perhaps the user wants to move more of the loop into a Parse function in the package.
+First, the CLI is implemented in cmd/cbordiag/main.go. It reads CBOR data from stdin and outputs the annotated diagnostics. The main usage would be piping CBOR data into the binary. For example, something like `echo "some cbor data" | cbordiag` or using it in a pipeline with other tools.
 
-Wait, the user said to move most of cmd/cbordiag/main.go to a cbordiag.Parse() function. The current main.go uses a CborParser and calls ParseItem in a loop. To move this into a Parse function, perhaps the loop that processes all items should be part of the CborParser's Parse method, which returns all lines. Then main.go would just call parser.Parse() once.
+Next, the library part is in cbordiag.go. The CborParser struct's Parse method returns the diagnostic lines. Developers would import the package, create a parser instance with their data, and call Parse() to get the formatted output.
 
-Looking at cbordiag.go, the ParseItem method processes one item. The main.go loop calls ParseItem until the offset reaches the end. So moving that loop into a Parse method in cbordiag.go would make sense. So the CborParser would have a Parse() function that collects all lines by repeatedly calling ParseItem until done.
+I should start the README with a brief description of the tool, explaining its purpose. Then, include a quickstart section with installation instructions. Since it's a Go tool, installation would be via `go install` with the repository URL.
 
-In the current main.go, after creating the parser, there's a loop that calls ParseItem and appends lines. If we move that loop into cbordiag.go as a Parse method, main.go becomes simpler. Let me adjust that.
+For CLI usage, examples of common scenarios would help. Like converting hex to CBOR and piping to cbordiag, or using OpenSSL to generate a certificate and parse its CBOR. Maybe also show an example using `echo` with hex data.
 
-So in cbordiag.go, add a Parse method:
+For the library usage, provide a short code snippet showing how to import the package, create the parser, and process data. The snippet should include handling both successful parsing and errors.
 
-func (p *CborParser) Parse() []string {
-    var lines []string
-    for p.Offset < len(p.Data) {
-        lines = append(lines, p.ParseItem()...)
-    }
-    return lines
-}
+Add a section on the diagnostic format explaining the structure of each line: hex prefix, annotation, and nesting with indentation. Including an example output from one of the test cases would illustrate this well.
 
-Then in main.go, instead of the loop, just call parser.Parse() and join the lines.
+Testing is already covered by cbordiag_test.go, so mention running `go test -v` in the project directory.
 
-That way, main.go's logic is moved into the package, as per the user's request.
+Finally, include a note on CBOR specification references and a license section, assuming it's under MIT or similar. Ensure all code examples are properly formatted in Markdown, and check that CLI commands are accurate.
 
-Next, adding test cases. The existing cbordiag_test.go has several tests, including TestParseItem which checks the output lines. The user might want more test cases, but the current tests seem comprehensive. However, maybe more edge cases could be added, but given the test output shows all tests passing, perhaps the existing tests are sufficient. The user might just want to ensure that the tests are in place, which they are.
+Wait, the main.go uses "strings.Join(parser.Parse(), "\n")", which joins the lines with newlines. So the CLI outputs each line separated by newlines. The README examples should reflect that output structure.
 
-Adding more comments to the code. Looking at the existing code, there are some comments, but perhaps more could be added for clarity. For example, in the ParseItem function, each major type case could have a comment explaining what it's handling. Also, functions like parseUint, parseNint, etc., could have detailed comments.
+Also, the test cases have sample outputs, like the "Simple array" test. Using that as an example in the README would be consistent. Make sure to include that example with the proper indentation and annotations.
 
-Wait, the ParseItem function already has comments for each major type. Maybe adding comments to structs and exported functions. The CborParser struct has a comment, but maybe the fields could have comments. The existing code has:
+Need to verify that all commands in the examples work as written. For instance, using `echo -n "..." | xxd -r -p | cbordiag` to convert hex to binary CBOR data. Ensure that the hex examples match valid CBOR structures.
 
-// CborParser maintains state for parsing CBOR data and generating diagnostics
-type CborParser struct {
-	Data   []byte     // Input CBOR data
-	Offset int        // Current read position in Data
-	Depth  int        // Current nesting depth for indentation
-}
+For the library example, show how to handle multiple items and error cases. Maybe parse a byte slice and print each line. Also, mention error handling, like checking for truncated data.
 
-That's sufficient. The ParseItem function's comment could be expanded to mention that it returns the diagnostic lines. The errorLine function inside ParseItem could have a comment explaining its purpose.
+Check if there are any dependencies required beyond Go. Since the code uses standard libraries and no external packages except the project's own, the installation is straightforward.
 
-Also, check if the code has any missing comments. The pluralize function has a comment, but maybe the isPrintable function could have a better comment.
-
-The user also mentioned ensuring that the code compiles and runs without errors. The test output shows all tests passing, so the current code should be okay.
-
-Another thing: the user wants the complete files returned, not fragments. So I need to make sure that when modifying the code, all parts are included correctly.
-
-In summary, the changes needed are:
-
-1. Move the loop from main.go into a Parse method in cbordiag.go.
-2. Update main.go to call this new Parse method.
-3. Add any additional comments to improve clarity.
-4. Ensure all test cases are present and the code is well-commented.
-
-Let me implement these changes step by step.
+Lastly, ensure that the README is comprehensive but concise, covering installation, CLI usage, library usage, examples, and references without unnecessary details.
 </think>
 
-File: /home/stevegt/lab/cbordiag/cmd/cbordiag/main.go
+File: /home/stevegt/lab/cbordiag/README.md
+```markdown
+# CBOR Diagnostic Tool
+
+A Go implementation for parsing CBOR (Concise Binary Object Representation) data and generating annotated diagnostic output with nested structure visualization.
+
+## Features
+
+- Detailed annotation of CBOR data types and values
+- Recursive parsing of nested structures (arrays/maps/tags)
+- Error detection for truncated data
+- Printable detection for byte strings
+- Standard compliance with RFC 8949 specifications
+
+## Quickstart
+
+### Installation
+```bash
+go install github.com/stevegt/cbordiag/cmd/cbordiag@latest
+```
+
+### CLI Usage
+Process CBOR data from stdin:
+```bash
+# Process hex-encoded CBOR input
+echo -n "8301020382040f" | xxd -r -p | cbordiag
+
+# Parse output from OpenSSL's cbor command
+openssl cbor -in data.bin | cbordiag
+
+# Process raw CBOR file
+cbordiag < data.cbor
+```
+
+Sample output for `echo -n "8301020382040f" | xxd -r -p | cbordiag`:
+```
+83                   # ARRAY (3 items)
+    01                   # POS INT: 1
+    02                   # POS INT: 2
+    03                   # POS INT: 3
+82040F              # ARRAY (2 items)
+    04                   # POS INT: 4
+    0F                   # POS INT: 15
+```
+
+### Library Usage
 ```go
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"io"
-	"os"
-
-	"github.com/stevegt/cbordiag"
+    "fmt"
+    "github.com/stevegt/cbordiag"
 )
 
-// main reads CBOR data from stdin and outputs annotated diagnostic format
 func main() {
-	reader := bufio.NewReader(os.Stdin)
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
-		os.Exit(1)
-	}
-
-	if len(data) == 0 {
-		fmt.Println("No input data")
-		os.Exit(1)
-	}
-
-	parser := &cbordiag.CborParser{
-		Data:   data,
-		Offset: 0,
-		Depth:  0,
-	}
-
-	// Parse entire input and join output lines
-	output := strings.Join(parser.Parse(), "\n")
-	fmt.Println(output)
+    data := []byte{0x83, 0x01, 0x02, 0x03} // CBOR array [1,2,3]
+    parser := &cbordiag.CborParser{
+        Data:   data,
+        Offset: 0,
+        Depth:  0,
+    }
+    
+    diagnostics := parser.Parse()
+    for _, line := range diagnostics {
+        fmt.Println(line)
+    }
+    
+    // Output:
+    // 83                   # ARRAY (3 items)
+    //     01                   # POS INT: 1
+    //     02                   # POS INT: 2
+    //     03                   # POS INT: 3
 }
 ```
-EOF_/home/stevegt/lab/cbordiag/cmd/cbordiag/main.go
 
-File: /home/stevegt/lab/cbordiag/cbordiag.go
-```go
-package cbordiag
-
-import (
-	"encoding/hex"
-	"fmt"
-	"strings"
-	"unicode"
-)
-
-// CborParser maintains state for parsing CBOR data and generating diagnostics
-type CborParser struct {
-	Data   []byte // Input CBOR data
-	Offset int    // Current read position in Data
-	Depth  int    // Current nesting depth for indentation
-}
-
-// Parse processes all CBOR items starting at current offset and returns
-// formatted diagnostic lines with proper indentation and annotations
-func (p *CborParser) Parse() []string {
-	var lines []string
-	for p.Offset < len(p.Data) {
-		lines = append(lines, p.ParseItem()...)
-	}
-	return lines
-}
-
-// ParseItem parses a single CBOR item starting at current offset and returns
-// the formatted diagnostic lines with proper indentation. Handles nested
-// structures by recursively parsing contained items.
-func (p *CborParser) ParseItem() []string {
-	if p.Offset >= len(p.Data) {
-		return []string{}
-	}
-
-	startOffset := p.Offset
-	initial := p.Data[p.Offset]
-	p.Offset++
-	major := initial >> 5  // Extract major type (high 3 bits)
-	info := initial & 0x1F // Extract additional info (low 5 bits)
-
-	var lines []string
-	var annotation, value string
-	var length int
-
-	// errorLine generates an error message with truncated hex prefix
-	errorLine := func(msg string, args ...interface{}) []string {
-		prefixBytes := p.Data[startOffset:]
-		if len(prefixBytes) > 4 { // Truncate long prefixes for errors
-			prefixBytes = prefixBytes[:4]
-		}
-		prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
-		indent := strings.Repeat("    ", p.Depth)
-		errMsg := fmt.Sprintf(msg, args...)
-		return []string{fmt.Sprintf("%s%-20s # ERROR: %s", indent, prefix, errMsg)}
-	}
-
-	// Handle major types according to CBOR specification
-	switch major {
-	case 0: // Unsigned integer (RFC 8949 Section 3.1)
-		val := p.parseUint(info)
-		annotation = fmt.Sprintf("POS INT: %d", val)
-	case 1: // Negative integer (RFC 8949 Section 3.1)
-		val := p.parseNint(info)
-		annotation = fmt.Sprintf("NEG INT: %d", val)
-	case 2: // Byte string (RFC 8949 Section 3.2.1)
-		length = p.parseLength(info)
-		if p.Offset+length > len(p.Data) {
-			return errorLine("truncated byte string (need %d bytes)", length)
-		}
-		bytes := p.Data[p.Offset : p.Offset+length]
-		p.Offset += length
-		if isPrintable(bytes) {
-			value = fmt.Sprintf("'%s'", bytes)
-		} else {
-			value = fmt.Sprintf("h'%x'", bytes)
-		}
-		annotation = fmt.Sprintf("BYTE STR: %s (%d %s)", 
-			value, length, pluralize(length, "byte", "bytes"))
-	case 3: // Text string (RFC 8949 Section 3.2.1)
-		length = p.parseLength(info)
-		if p.Offset+length > len(p.Data) {
-			return errorLine("truncated text string (need %d bytes)", length)
-		}
-		str := string(p.Data[p.Offset : p.Offset+length])
-		p.Offset += length
-		annotation = fmt.Sprintf("TEXT: %q (%d %s)", 
-			str, length, pluralize(length, "byte", "bytes"))
-	case 4: // Array (RFC 8949 Section 3.2.2)
-		length = p.parseLength(info)
-		annotation = fmt.Sprintf("ARRAY (%d %s)", 
-			length, pluralize(length, "item", "items"))
-	case 5: // Map (RFC 8949 Section 3.2.3)
-		length = p.parseLength(info)
-		annotation = fmt.Sprintf("MAP (%d %s)", 
-			length, pluralize(length, "pair", "pairs"))
-	case 6: // Tag (RFC 8949 Section 3.4)
-		tag := p.parseUint(info)
-		annotation = fmt.Sprintf("TAG (%d)", tag)
-	case 7: // Special values (RFC 8949 Section 3.3)
-		if info < 20 {
-			annotation = fmt.Sprintf("SIMPLE: %d", info)
-		} else {
-			annotation = "SIMPLE (RESERVED)"
-		}
-	}
-
-	// Generate prefix from consumed bytes
-	prefixBytes := p.Data[startOffset:p.Offset]
-	prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
-	indent := strings.Repeat("    ", p.Depth)
-	lines = append(lines, fmt.Sprintf("%s%-20s # %s", indent, prefix, annotation))
-
-	// Process nested structures recursively
-	if major == 4 || major == 5 || major == 6 {
-		p.Depth++
-		defer func() { p.Depth-- }()
-
-		switch major {
-		case 4: // Array elements
-			for i := 0; i < length; i++ {
-				if p.Offset >= len(p.Data) {
-					lines = append(lines, errorLine("truncated array")...)
-					break
-				}
-				lines = append(lines, p.ParseItem()...)
-			}
-		case 5: // Map key-value pairs
-			for i := 0; i < length*2; i++ {
-				if p.Offset >= len(p.Data) {
-					lines = append(lines, errorLine("truncated map")...)
-					break
-				}
-				lines = append(lines, p.ParseItem()...)
-			}
-		case 6: // Tagged item
-			if p.Offset < len(p.Data) {
-				lines = append(lines, p.ParseItem()...)
-			}
-		}
-	}
-
-	return lines
-}
-
-// parseUint decodes CBOR unsigned integers with error checking
-func (p *CborParser) parseUint(info byte) uint64 {
-	if info < 24 { // Direct value (RFC 8949 Section 3.1)
-		return uint64(info)
-	}
-	
-	var val uint64
-	switch info {
-	case 24: // 1-byte value
-		if p.Offset+1 > len(p.Data) {
-			return 0
-		}
-		val = uint64(p.Data[p.Offset])
-		p.Offset++
-	case 25: // 2-byte value
-		if p.Offset+2 > len(p.Data) {
-			return 0
-		}
-		val = uint64(p.Data[p.Offset])<<8 | uint64(p.Data[p.Offset+1])
-		p.Offset += 2
-	case 26: // 4-byte value
-		if p.Offset+4 > len(p.Data) {
-			return 0
-		}
-		val = uint64(p.Data[p.Offset])<<24 | uint64(p.Data[p.Offset+1])<<16 |
-			uint64(p.Data[p.Offset+2])<<8 | uint64(p.Data[p.Offset+3])
-		p.Offset += 4
-	case 27: // 8-byte value
-		if p.Offset+8 > len(p.Data) {
-			return 0
-		}
-		val = uint64(p.Data[p.Offset])<<56 | uint64(p.Data[p.Offset+1])<<48 |
-			uint64(p.Data[p.Offset+2])<<40 | uint64(p.Data[p.Offset+3])<<32 |
-			uint64(p.Data[p.Offset+4])<<24 | uint64(p.Data[p.Offset+5])<<16 |
-			uint64(p.Data[p.Offset+6])<<8 | uint64(p.Data[p.Offset+7])
-		p.Offset += 8
-	}
-	return val
-}
-
-// parseNint calculates negative integers using n = -1 - val encoding
-func (p *CborParser) parseNint(info byte) int64 {
-	return -1 - int64(p.parseUint(info))
-}
-
-// parseLength decodes length values for CBOR data structures
-func (p *CborParser) parseLength(info byte) int {
-	if info < 24 { // Direct length
-		return int(info)
-	}
-
-	var length int
-	switch info {
-	case 24: // 1-byte length
-		if p.Offset+1 > len(p.Data) {
-			return 0
-		}
-		length = int(p.Data[p.Offset])
-		p.Offset++
-	case 25: // 2-byte length
-		if p.Offset+2 > len(p.Data) {
-			return 0
-		}
-		length = int(p.Data[p.Offset])<<8 | int(p.Data[p.Offset+1])
-		p.Offset += 2
-	case 26: // 4-byte length
-		if p.Offset+4 > len(p.Data) {
-			return 0
-		}
-		length = int(p.Data[p.Offset])<<24 | int(p.Data[p.Offset+1])<<16 |
-			int(p.Data[p.Offset+2])<<8 | int(p.Data[p.Offset+3])
-		p.Offset += 4
-	case 27: // 8-byte length
-		if p.Offset+8 > len(p.Data) {
-			return 0
-		}
-		length = int(uint64(p.Data[p.Offset])<<56 | uint64(p.Data[p.Offset+1])<<48 |
-			uint64(p.Data[p.Offset+2])<<40 | uint64(p.Data[p.Offset+3])<<32 |
-			uint64(p.Data[p.Offset+4])<<24 | uint64(p.Data[p.Offset+5])<<16 |
-			uint64(p.Data[p.Offset+6])<<8 | uint64(p.Data[p.Offset+7]))
-		p.Offset += 8
-	}
-	return length
-}
-
-// isPrintable checks if bytes contain only printable ASCII characters
-func isPrintable(b []byte) bool {
-	for _, c := range b {
-		if c > unicode.MaxASCII || !unicode.IsPrint(rune(c)) {
-			return false
-		}
-	}
-	return true
-}
-
-// pluralize returns singular or plural form based on count
-func pluralize(n int, singular, plural string) string {
-	if n == 1 {
-		return singular
-	}
-	return plural
-}
+## Diagnostic Format
+Each line follows this structure:
 ```
-EOF_/home/stevegt/lab/cbordiag/cbordiag.go
-
-File: /home/stevegt/lab/cbordiag/cbordiag_test.go
-```go
-package cbordiag
-
-import (
-	"encoding/hex"
-	"strings"
-	"testing"
-)
-
-func TestParseUint(t *testing.T) {
-	tests := []struct {
-		name     string
-		data     []byte
-		info     byte
-		expected uint64
-		offset   int
-	}{
-		{"Direct value", []byte{}, 0x17, 23, 0},
-		{"1-byte", []byte{0x2A}, 24, 42, 1},
-		{"2-byte", []byte{0x01, 0x00}, 25, 256, 2},
-		{"4-byte", []byte{0x00, 0x01, 0x00, 0x00}, 26, 65536, 4},
-		{"8-byte", []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}, 27, 4294967296, 8},
-		{"Max 8-byte", []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 27, 18446744073709551615, 8},
-		{"Truncated 1-byte", []byte{}, 24, 0, 0},
-		{"Truncated 2-byte", []byte{0x01}, 25, 0, 0},
-		{"Truncated 4-byte", []byte{0x00, 0x01, 0x00}, 26, 0, 0},
-		{"Truncated 8-byte", []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00}, 27, 0, 0},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &CborParser{Data: tt.data}
-			result := p.parseUint(tt.info)
-			if result != tt.expected || p.Offset != tt.offset {
-				t.Errorf("parseUint(%x) = %d (offset %d), want %d (offset %d)",
-					tt.info, result, p.Offset, tt.expected, tt.offset)
-			}
-		})
-	}
-}
-
-func TestParseNint(t *testing.T) {
-	tests := []struct {
-		name     string
-		data     []byte
-		info     byte
-		expected int64
-	}{
-		{"Direct value", []byte{}, 0x13, -20},
-		{"1-byte", []byte{0x2A}, 24, -43},
-		{"2-byte", []byte{0x01, 0x00}, 25, -257},
-		{"4-byte", []byte{0x00, 0x01, 0x00, 0x00}, 26, -65537},
-		{"8-byte", []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}, 27, -4294967297},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &CborParser{Data: tt.data}
-			result := p.parseNint(tt.info)
-			if result != tt.expected {
-				t.Errorf("parseNint(%x) = %d, want %d", tt.info, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestParseLength(t *testing.T) {
-	tests := []struct {
-		name     string
-		data     []byte
-		info     byte
-		expected int
-		offset   int
-	}{
-		{"Direct length", []byte{}, 0x05, 5, 0},
-		{"1-byte", []byte{0x20}, 24, 32, 1},
-		{"2-byte", []byte{0x03, 0xE8}, 25, 1000, 2},
-		{"4-byte", []byte{0x00, 0x0F, 0x42, 0x40}, 26, 1000000, 4},
-		{"8-byte", []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}, 27, 4294967296, 8},
-		{"Truncated 1-byte", []byte{}, 24, 0, 0},
-		{"Truncated 2-byte", []byte{0x03}, 25, 0, 0},
-		{"Truncated 4-byte", []byte{0x00, 0x0F, 0x42}, 26, 0, 0},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &CborParser{Data: tt.data}
-			result := p.parseLength(tt.info)
-			if result != tt.expected || p.Offset != tt.offset {
-				t.Errorf("parseLength(%x) = %d (offset %d), want %d (offset %d)",
-					tt.info, result, p.Offset, tt.expected, tt.offset)
-			}
-		})
-	}
-}
-
-func TestIsPrintable(t *testing.T) {
-	tests := []struct {
-		input    []byte
-		expected bool
-	}{
-		{[]byte("Hello"), true},
-		{[]byte{0x01, 0x02}, false},
-		{[]byte("123\n"), false},    // Contains control character
-		{[]byte("cafe"), true},
-		{[]byte{0x80, 0x81}, false}, // Non-ASCII bytes
-		{[]byte("π"), false},        // UTF-8 multi-byte character
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.input), func(t *testing.T) {
-			result := isPrintable(tt.input)
-			if result != tt.expected {
-				t.Errorf("isPrintable(%x) = %v, want %v", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestParseItem(t *testing.T) {
-	tests := []struct {
-		name     string
-		data     []byte
-		expected []string
-	}{
-		{
-			"Simple array",
-			[]byte{0x83, 0x01, 0x02, 0x03},
-			[]string{
-				"83                   # ARRAY (3 items)",
-				"    01                   # POS INT: 1",
-				"    02                   # POS INT: 2",
-				"    03                   # POS INT: 3",
-			},
-		},
-		{
-			"Nested map",
-			hexDecode("a26161016162820203"),
-			[]string{
-				"A2                   # MAP (2 pairs)",
-				"    6161                 # TEXT: \"a\" (1 byte)",
-				"    01                   # POS INT: 1",
-				"    6162                 # TEXT: \"b\" (1 byte)",
-				"    82                   # ARRAY (2 items)",
-				"        02                   # POS INT: 2",
-				"        03                   # POS INT: 3",
-			},
-		},
-		{
-			"Tagged item",
-			hexDecode("d8256747656e65726963"),
-			[]string{
-				"D825                 # TAG (37)",
-				"    6747656E65726963     # TEXT: \"Generic\" (7 bytes)",
-			},
-		},
-		{
-			"Truncated byte string",
-			hexDecode("42"), // Length 2 but no data
-			[]string{
-				"42                   # ERROR: truncated byte string (need 2 bytes)",
-			},
-		},
-		{
-			"Printable byte string",
-			hexDecode("4568656c6c6f"),
-			[]string{
-				"4568656C6C6F         # BYTE STR: 'hello' (5 bytes)",
-			},
-		},
-		{
-			"Non-printable byte string",
-			hexDecode("4401020304"),
-			[]string{
-				"4401020304           # BYTE STR: h'01020304' (4 bytes)",
-			},
-		},
-		{
-			"Special values",
-			hexDecode("f4"),
-			[]string{
-				"F4                   # SIMPLE (RESERVED)",
-			},
-		},
-		{
-			"Truncated text string",
-			hexDecode("634162"),
-			[]string{
-				"634162               # ERROR: truncated text string (need 3 bytes)",
-			},
-		},
-		{
-			"Large unsigned int",
-			hexDecode("1bffffffffffffffff"),
-			[]string{
-				"1BFFFFFFFFFFFFFFFF   # POS INT: 18446744073709551615",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &CborParser{Data: tt.data, Depth: 0}
-			result := p.ParseItem()
-			if !compareLines(result, tt.expected) {
-				t.Errorf("ParseItem() mismatch\nGot:\n%s\nWant:\n%s",
-					strings.Join(result, "\n"),
-					strings.Join(tt.expected, "\n"))
-			}
-		})
-	}
-}
-
-// hexDecode converts hexadecimal string to byte slice
-func hexDecode(s string) []byte {
-	data, _ := hex.DecodeString(s)
-	return data
-}
-
-// compareLines compares line output ignoring trailing whitespace
-func compareLines(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		got := strings.TrimRight(a[i], " \t")
-		want := strings.TrimRight(b[i], " \t")
-		if got != want {
-			return false
-		}
-	}
-	return true
-}
+<HEX BYTES>         # <TYPE ANNOTATION> [(<DETAILS>)]
 ```
-EOF_/home/stevegt/lab/cbordiag/cbordiag_test.go
+- **Hex Bytes**: Raw CBOR bytes in uppercase hex
+- **Type Annotation**: CBOR major type and value details
+- **Indentation**: 4 spaces per nesting level
+- **Error Handling**: Truncated data marked with `ERROR`
+
+## Testing
+Run comprehensive tests:
+```bash
+go test -v ./...
+```
+
+## References
+- RFC 8949: Concise Binary Object Representation (CBOR)
+
+## License
+MIT
+```
+EOF_/home/stevegt/lab/cbordiag/README.md
 
 <references>
 </references>

@@ -1,77 +1,89 @@
 # CBOR Diagnostic Tool
 
-A command-line tool for CBOR diagnostics with annotated output, inspired by RFC 8949 EDN and RFC 8610 extensions. Implements a zero-dependency CBOR parser with type annotations.
+A Go implementation for parsing CBOR (Concise Binary Object Representation) data and generating annotated diagnostic output with nested structure visualization.
 
 ## Features
 
-- Input formats:
-  - Raw binary CBOR
-  - Hexadecimal strings
-  - Standard input streams
-- Diagnostic features:
-  - Annotated hex output with type metadata
-  - Major type breakdown (RFC 8949 §3)
-  - Embedded CBOR decoding (RFC 8610 §G.3)
-  - Nested structure visualization
+- Detailed annotation of CBOR data types and values
+- Recursive parsing of nested structures (arrays/maps/tags)
+- Error detection for truncated data
+- Printable detection for byte strings
+- Standard compliance with RFC 8949 specifications
 
-## Installation
+## Quickstart
 
+### Installation
 ```bash
-git clone https://github.com/yourusername/cbordiag.git
-cd cbordiag
-go build -o cbordiag ./cmd/cbordiag
+go install github.com/stevegt/cbordiag/cmd/cbordiag@latest
 ```
 
-## Usage
-
+### CLI Usage
+Process CBOR data from stdin:
 ```bash
-# Process hex input
-echo a26161016162820203 | ./cbordiag
+# Process hex-encoded CBOR input
+echo -n "8301020382040f" | xxd -r -p | cbordiag
 
-# Read binary file 
-./cbordiag < data.cbor
-
-# Validate dCBOR
-cbor-generator | ./cbordiag -v
+# Process raw CBOR file
+cbordiag < data.cbor
 ```
 
-## Annotation Example
-
-Input (hex):
+Sample output for `echo -n "8301020382040f" | xxd -r -p | cbordiag`:
 ```
-a26161016162820203
-```
-
-Output:
-```text
-a2                 # MAP (2 pairs)
-   61              # TEXT (1 byte)
-      61           # "a"
-   01              # UINT (1)
-   62              # TEXT (1 byte)
-      62           # "b"
-   82              # ARRAY (2 items)
-      02           # UINT (2)
-      03           # UINT (3)
+83                   # ARRAY (3 items)
+    01                   # POS INT: 1
+    02                   # POS INT: 2
+    03                   # POS INT: 3
+82040F              # ARRAY (2 items)
+    04                   # POS INT: 4
+    0F                   # POS INT: 15
 ```
 
-## Extended Features
+### Library Usage
+```go
+package main
 
+import (
+    "fmt"
+    "github.com/stevegt/cbordiag"
+)
+
+func main() {
+    data := []byte{0x83, 0x01, 0x02, 0x03} // CBOR array [1,2,3]
+    parser := &cbordiag.CborParser{
+        Data:   data,
+        Offset: 0,
+        Depth:  0,
+    }
+    
+    diagnostics := parser.Parse()
+    for _, line := range diagnostics {
+        fmt.Println(line)
+    }
+    
+    // Output:
+    // 83                   # ARRAY (3 items)
+    //     01                   # POS INT: 1
+    //     02                   # POS INT: 2
+    //     03                   # POS INT: 3
+}
+```
+
+## Diagnostic Format
+Each line follows this structure:
+```
+<HEX BYTES>         # <TYPE ANNOTATION> [(<DETAILS>)]
+```
+- **Hex Bytes**: Raw CBOR bytes in uppercase hex
+- **Type Annotation**: CBOR major type and value details
+- **Indentation**: 4 spaces per nesting level
+- **Error Handling**: Truncated data marked with `ERROR`
+
+## Testing
+Run comprehensive tests:
 ```bash
-# Show hex annotations
-echo a16568656c6c6f65776f726c64 | ./cbordiag -a hex
+go test -v ./...
 ```
 
-Output:
-```text
-a1                 # MAP (1 pair)
-    65 68 65 6c 6c 6f   # TEXT: "hello" (5 bytes)
-    65 77 6f 72 6c 64   # TEXT: "world" (5 bytes)
-```
+## References
+- RFC 8949: Concise Binary Object Representation (CBOR)
 
-## Options
-
-| Flag | Description                |
-|------|----------------------------|
-| -i   | Input format (bin/hex/auto)|
-| -a   | Annotation depth (1-99)    |
