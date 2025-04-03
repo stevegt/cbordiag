@@ -70,23 +70,6 @@ stdout:
 === RUN   TestParseItem
 === RUN   TestParseItem/Simple_array
 === RUN   TestParseItem/Nested_map
-    cbordiag_test.go:205: ParseItem() mismatch
-        Got:
-        A2                   # MAP (2 pairs)
-            6161                 # TEXT: "a" (1 byte)
-            01                   # POS INT: 1
-            6162                 # TEXT: "b" (1 byte)
-            82                   # ARRAY (2 items)
-                02                   # POS INT: 2
-                03                   # POS INT: 3
-        Want:
-        A26161016162820203   # MAP (2 pairs)
-            6161                 # TEXT: "a" (1 byte)
-            01                   # POS INT: 1
-            6162                 # TEXT: "b" (1 byte)
-            82                   # ARRAY (2 items)
-                02                   # POS INT: 2
-                03                   # POS INT: 3
 === RUN   TestParseItem/Tagged_item
 === RUN   TestParseItem/Truncated_byte_string
 === RUN   TestParseItem/Printable_byte_string
@@ -94,9 +77,9 @@ stdout:
 === RUN   TestParseItem/Special_values
 === RUN   TestParseItem/Truncated_text_string
 === RUN   TestParseItem/Large_unsigned_int
---- FAIL: TestParseItem (0.00s)
+--- PASS: TestParseItem (0.00s)
     --- PASS: TestParseItem/Simple_array (0.00s)
-    --- FAIL: TestParseItem/Nested_map (0.00s)
+    --- PASS: TestParseItem/Nested_map (0.00s)
     --- PASS: TestParseItem/Tagged_item (0.00s)
     --- PASS: TestParseItem/Truncated_byte_string (0.00s)
     --- PASS: TestParseItem/Printable_byte_string (0.00s)
@@ -104,9 +87,8 @@ stdout:
     --- PASS: TestParseItem/Special_values (0.00s)
     --- PASS: TestParseItem/Truncated_text_string (0.00s)
     --- PASS: TestParseItem/Large_unsigned_int (0.00s)
-FAIL
-exit status 1
-FAIL	github.com/stevegt/cbordiag	0.004s
+PASS
+ok  	github.com/stevegt/cbordiag	0.004s
 
 
 stderr:
