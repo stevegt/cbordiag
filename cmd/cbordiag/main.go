@@ -21,7 +21,7 @@ func main() {
 	parser := &cborParser{
 		data:   data,
 		offset: 0,
-		depth:  -1, // Start at -1 to compensate for root level
+		depth:  0,
 	}
 
 	var output strings.Builder
