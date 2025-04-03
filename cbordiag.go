@@ -7,26 +7,34 @@ import (
 	"unicode"
 )
 
-type cborParser struct {
-	data   []byte
-	offset int
-	depth  int
+type CborParser struct {
+	Data   []byte
+	Offset int
+	Depth  int
 }
 
-func (p *cborParser) parseItem() []string {
-	if p.offset >= len(p.data) {
+func (p *CborParser) ParseItem() []string {
+	if p.Offset >= len(p.Data) {
 		return []string{}
 	}
 
-	startOffset := p.offset
-	initial := p.data[p.offset]
-	p.offset++
+	startOffset := p.Offset
+	initial := p.Data[p.Offset]
+	p.Offset++
 	major := initial >> 5
 	info := initial & 0x1F
 
 	var lines []string
 	var annotation, value string
 	var length int
+
+	// Helper to create error lines with hex prefix
+	errorLine := func(msg string, args ...interface{}) []string {
+		prefixBytes := p.Data[startOffset:p.Offset]
+		prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
+		indent := strings.Repeat("    ", p.Depth)
+		return []string{fmt.Sprintf("%s%-20s # ERROR: "+msg, indent, prefix, args...)}
+	}
 
 	switch major {
 	case 0: // Unsigned integer
@@ -37,12 +45,11 @@ func (p *cborParser) parseItem() []string {
 		annotation = fmt.Sprintf("NEG INT: %d", val)
 	case 2: // Byte string
 		length = p.parseLength(info)
-		if p.offset+length > len(p.data) {
-			return []string{fmt.Sprintf("%sERROR: truncated byte string (need %d bytes)",
-				strings.Repeat("    ", p.depth), length)}
+		if p.Offset+length > len(p.Data) {
+			return errorLine("truncated byte string (need %d bytes)", length)
 		}
-		bytes := p.data[p.offset : p.offset+length]
-		p.offset += length
+		bytes := p.Data[p.Offset : p.Offset+length]
+		p.Offset += length
 		if isPrintable(bytes) {
 			value = fmt.Sprintf("'%s'", bytes)
 		} else {
@@ -51,12 +58,11 @@ func (p *cborParser) parseItem() []string {
 		annotation = fmt.Sprintf("BYTE STR: %s (%d bytes)", value, length)
 	case 3: // Text string
 		length = p.parseLength(info)
-		if p.offset+length > len(p.data) {
-			return []string{fmt.Sprintf("%sERROR: truncated text string (need %d bytes)",
-				strings.Repeat("    ", p.depth), length)}
+		if p.Offset+length > len(p.Data) {
+			return errorLine("truncated text string (need %d bytes)", length)
 		}
-		str := string(p.data[p.offset : p.offset+length])
-		p.offset += length
+		str := string(p.Data[p.Offset : p.Offset+length])
+		p.Offset += length
 		annotation = fmt.Sprintf("TEXT: %q (%d bytes)", str, length)
 	case 4: // Array
 		length = p.parseLength(info)
@@ -75,113 +81,121 @@ func (p *cborParser) parseItem() []string {
 		}
 	}
 
+	// Handle nesting for composite types
 	if major == 4 || major == 5 || major == 6 {
-		p.depth++
-		defer func() { p.depth-- }()
+		p.Depth++
+		defer func() { p.Depth-- }()
 	}
 
-	prefixBytes := p.data[startOffset:p.offset]
+	// Create main annotation line
+	prefixBytes := p.Data[startOffset:p.Offset]
 	prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
+	indent := strings.Repeat("    ", p.Depth)
+	lines = append(lines, fmt.Sprintf("%s%-20s # %s", indent, prefix, annotation))
 
-	indent := strings.Repeat("    ", p.depth)
-	line := fmt.Sprintf("%s%-20s # %s", indent, prefix, annotation)
-	lines = append(lines, line)
-
+	// Process nested items
 	switch major {
 	case 4: // Array
 		for i := 0; i < length; i++ {
-			if p.offset >= len(p.data) {
-				lines = append(lines, fmt.Sprintf("%sERROR: truncated array", indent))
+			if p.Offset >= len(p.Data) {
+				lines = append(lines, errorLine("truncated array")...)
 				break
 			}
-			lines = append(lines, p.parseItem()...)
+			lines = append(lines, p.ParseItem()...)
 		}
 	case 5: // Map
 		for i := 0; i < length*2; i++ {
-			if p.offset >= len(p.data) {
-				lines = append(lines, fmt.Sprintf("%sERROR: truncated map", indent))
+			if p.Offset >= len(p.Data) {
+				lines = append(lines, errorLine("truncated map")...)
 				break
 			}
-			lines = append(lines, p.parseItem()...)
+			lines = append(lines, p.ParseItem()...)
 		}
 	case 6: // Tag
-		if p.offset < len(p.data) {
-			lines = append(lines, p.parseItem()...)
+		if p.Offset < len(p.Data) {
+			lines = append(lines, p.ParseItem()...)
 		}
 	}
 
 	return lines
 }
 
-func (p *cborParser) parseUint(info byte) uint64 {
+func (p *CborParser) parseUint(info byte) uint64 {
 	if info < 24 {
 		return uint64(info)
 	}
 	var val uint64
-	start := p.offset
 	switch info {
 	case 24:
-		if p.offset+1 > len(p.data) {
+		if p.Offset+1 > len(p.Data) {
 			return 0
 		}
-		val = uint64(p.data[p.offset])
-		p.offset += 1
+		val = uint64(p.Data[p.Offset])
+		p.Offset++
 	case 25:
-		if p.offset+2 > len(p.data) {
+		if p.Offset+2 > len(p.Data) {
 			return 0
 		}
-		val = uint64(p.data[p.offset])<<8 | uint64(p.data[p.offset+1])
-		p.offset += 2
+		val = uint64(p.Data[p.Offset])<<8 | uint64(p.Data[p.Offset+1])
+		p.Offset += 2
 	case 26:
-		if p.offset+4 > len(p.data) {
+		if p.Offset+4 > len(p.Data) {
 			return 0
 		}
-		val = uint64(p.data[p.offset])<<24 | uint64(p.data[p.offset+1])<<16 |
-			uint64(p.data[p.offset+2])<<8 | uint64(p.data[p.offset+3])
-		p.offset += 4
+		val = uint64(p.Data[p.Offset])<<24 | uint64(p.Data[p.Offset+1])<<16 |
+			uint64(p.Data[p.Offset+2])<<8 | uint64(p.Data[p.Offset+3])
+		p.Offset += 4
 	case 27:
-		if p.offset+8 > len(p.data) {
+		if p.Offset+8 > len(p.Data) {
 			return 0
 		}
-		val = uint64(p.data[p.offset])<<56 | uint64(p.data[p.offset+1])<<48 |
-			uint64(p.data[p.offset+2])<<40 | uint64(p.data[p.offset+3])<<32 |
-			uint64(p.data[p.offset+4])<<24 | uint64(p.data[p.offset+5])<<16 |
-			uint64(p.data[p.offset+6])<<8 | uint64(p.data[p.offset+7])
-		p.offset += 8
+		val = uint64(p.Data[p.Offset])<<56 | uint64(p.Data[p.Offset+1])<<48 |
+			uint64(p.Data[p.Offset+2])<<40 | uint64(p.Data[p.Offset+3])<<32 |
+			uint64(p.Data[p.Offset+4])<<24 | uint64(p.Data[p.Offset+5])<<16 |
+			uint64(p.Data[p.Offset+6])<<8 | uint64(p.Data[p.Offset+7])
+		p.Offset += 8
 	}
 	return val
 }
 
-func (p *cborParser) parseNint(info byte) int64 {
+func (p *CborParser) parseNint(info byte) int64 {
 	return -1 - int64(p.parseUint(info))
 }
 
-func (p *cborParser) parseLength(info byte) int {
+func (p *CborParser) parseLength(info byte) int {
 	if info < 24 {
 		return int(info)
-	}
-	if p.offset >= len(p.data) {
-		return 0
 	}
 	var length int
 	switch info {
 	case 24:
-		length = int(p.data[p.offset])
-		p.offset++
+		if p.Offset+1 > len(p.Data) {
+			return 0
+		}
+		length = int(p.Data[p.Offset])
+		p.Offset++
 	case 25:
-		length = int(p.data[p.offset])<<8 | int(p.data[p.offset+1])
-		p.offset += 2
+		if p.Offset+2 > len(p.Data) {
+			return 0
+		}
+		length = int(p.Data[p.Offset])<<8 | int(p.Data[p.Offset+1])
+		p.Offset += 2
 	case 26:
-		length = int(p.data[p.offset])<<24 | int(p.data[p.offset+1])<<16 |
-			int(p.data[p.offset+2])<<8 | int(p.data[p.offset+3])
-		p.offset += 4
+		if p.Offset+4 > len(p.Data) {
+			return 0
+		}
+		length = int(p.Data[p.Offset])<<24 | int(p.Data[p.Offset+1])<<16 |
+			int(p.Data[p.Offset+2])<<8 | int(p.Data[p.Offset+3])
+		p.Offset += 4
 	case 27:
-		high := uint64(p.data[p.offset])<<56 | uint64(p.data[p.offset+1])<<48 |
-			uint64(p.data[p.offset+2])<<40 | uint64(p.data[p.offset+3])<<32
-		low := uint64(p.data[p.offset+4])<<24 | uint64(p.data[p.offset+5])<<16 |
-			uint64(p.data[p.offset+6])<<8 | uint64(p.data[p.offset+7])
-		length = int(high | low)
-		p.offset += 8
+		if p.Offset+8 > len(p.Data) {
+			return 0
+		}
+		length = int(uint64(p.Data[p.Offset])<<56 | uint64(p.Data[p.Offset+1])<<48 |
+			uint64(p.Data[p.Offset+2])<<40 | uint64(p.Data[p.Offset+3])<<32 |
+			uint64(p.Data[p.Offset+4])<<24 | uint64(p.Data[p.Offset+5])<<16 |
+			uint64(p.Data[p.Offset+6])<<8 | uint64(p.Data[p.Offset+7]))
+		p.Offset += 8
 	}
 	return length
 }

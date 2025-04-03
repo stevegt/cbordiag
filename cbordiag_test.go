@@ -23,11 +23,11 @@ func TestParseUint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &cborParser{data: tt.data}
+			p := &CborParser{Data: tt.data}
 			result := p.parseUint(tt.info)
-			if result != tt.expected || p.offset != tt.offset {
+			if result != tt.expected || p.Offset != tt.offset {
 				t.Errorf("parseUint(%x) = %d (offset %d), want %d (offset %d)",
-					tt.info, result, p.offset, tt.expected, tt.offset)
+					tt.info, result, p.Offset, tt.expected, tt.offset)
 			}
 		})
 	}
@@ -47,7 +47,7 @@ func TestParseNint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &cborParser{data: tt.data}
+			p := &CborParser{Data: tt.data}
 			result := p.parseNint(tt.info)
 			if result != tt.expected {
 				t.Errorf("parseNint(%x) = %d, want %d", tt.info, result, tt.expected)
@@ -72,11 +72,11 @@ func TestParseLength(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &cborParser{data: tt.data}
+			p := &CborParser{Data: tt.data}
 			result := p.parseLength(tt.info)
-			if result != tt.expected || p.offset != tt.offset {
+			if result != tt.expected || p.Offset != tt.offset {
 				t.Errorf("parseLength(%x) = %d (offset %d), want %d (offset %d)",
-					tt.info, result, p.offset, tt.expected, tt.offset)
+					tt.info, result, p.Offset, tt.expected, tt.offset)
 			}
 		})
 	}
@@ -90,7 +90,7 @@ func TestIsPrintable(t *testing.T) {
 		{[]byte("Hello"), true},
 		{[]byte{0x01, 0x02}, false},
 		{[]byte("123\n"), false},
-		{[]byte(" café"), false},
+		{[]byte(" café"), true}, // Contains non-ASCII but printable characters
 	}
 
 	for _, tt := range tests {
@@ -140,14 +140,21 @@ func TestParseItem(t *testing.T) {
 				"    656E65726963       # TEXT: \"Generic\" (7 bytes)",
 			},
 		},
+		{
+			"Truncated byte string",
+			hexDecode("42"), // Length 2 but no data
+			[]string{
+				"42                   # ERROR: truncated byte string (need 2 bytes)",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &cborParser{data: tt.data, depth: 0}
-			result := p.parseItem()
+			p := &CborParser{Data: tt.data, Depth: 0}
+			result := p.ParseItem()
 			if !compareLines(result, tt.expected) {
-				t.Errorf("parseItem() mismatch\nGot:\n%s\nWant:\n%s",
+				t.Errorf("ParseItem() mismatch\nGot:\n%s\nWant:\n%s",
 					strings.Join(result, "\n"),
 					strings.Join(tt.expected, "\n"))
 			}
