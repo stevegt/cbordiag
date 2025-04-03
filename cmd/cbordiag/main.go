@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/stevegt/cbordiag"
 )
@@ -30,13 +29,7 @@ func main() {
 		Depth:  0,
 	}
 
-	var output strings.Builder
-	for parser.Offset < len(parser.Data) {
-		lines := parser.ParseItem()
-		for _, line := range lines {
-			output.WriteString(line + "\n")
-		}
-	}
-
-	fmt.Print(output.String())
+	// Parse entire input and join output lines
+	output := strings.Join(parser.Parse(), "\n")
+	fmt.Println(output)
 }

@@ -9,9 +9,19 @@ import (
 
 // CborParser maintains state for parsing CBOR data and generating diagnostics
 type CborParser struct {
-	Data   []byte     // Input CBOR data
-	Offset int        // Current read position in Data
-	Depth  int        // Current nesting depth for indentation
+	Data   []byte // Input CBOR data
+	Offset int    // Current read position in Data
+	Depth  int    // Current nesting depth for indentation
+}
+
+// Parse processes all CBOR items starting at current offset and returns
+// formatted diagnostic lines with proper indentation and annotations
+func (p *CborParser) Parse() []string {
+	var lines []string
+	for p.Offset < len(p.Data) {
+		lines = append(lines, p.ParseItem()...)
+	}
+	return lines
 }
 
 // ParseItem parses a single CBOR item starting at current offset and returns
@@ -25,14 +35,14 @@ func (p *CborParser) ParseItem() []string {
 	startOffset := p.Offset
 	initial := p.Data[p.Offset]
 	p.Offset++
-	major := initial >> 5      // Extract major type (high 3 bits)
-	info := initial & 0x1F     // Extract additional info (low 5 bits)
+	major := initial >> 5  // Extract major type (high 3 bits)
+	info := initial & 0x1F // Extract additional info (low 5 bits)
 
 	var lines []string
 	var annotation, value string
 	var length int
 
-	// errorLine generates an error message line with truncated hex prefix
+	// errorLine generates an error message with truncated hex prefix
 	errorLine := func(msg string, args ...interface{}) []string {
 		prefixBytes := p.Data[startOffset:]
 		if len(prefixBytes) > 4 { // Truncate long prefixes for errors
@@ -44,15 +54,15 @@ func (p *CborParser) ParseItem() []string {
 		return []string{fmt.Sprintf("%s%-20s # ERROR: %s", indent, prefix, errMsg)}
 	}
 
-	// Handle major types
+	// Handle major types according to CBOR specification
 	switch major {
-	case 0: // Unsigned integer
+	case 0: // Unsigned integer (RFC 8949 Section 3.1)
 		val := p.parseUint(info)
 		annotation = fmt.Sprintf("POS INT: %d", val)
-	case 1: // Negative integer
+	case 1: // Negative integer (RFC 8949 Section 3.1)
 		val := p.parseNint(info)
 		annotation = fmt.Sprintf("NEG INT: %d", val)
-	case 2: // Byte string
+	case 2: // Byte string (RFC 8949 Section 3.2.1)
 		length = p.parseLength(info)
 		if p.Offset+length > len(p.Data) {
 			return errorLine("truncated byte string (need %d bytes)", length)
@@ -66,7 +76,7 @@ func (p *CborParser) ParseItem() []string {
 		}
 		annotation = fmt.Sprintf("BYTE STR: %s (%d %s)", 
 			value, length, pluralize(length, "byte", "bytes"))
-	case 3: // Text string
+	case 3: // Text string (RFC 8949 Section 3.2.1)
 		length = p.parseLength(info)
 		if p.Offset+length > len(p.Data) {
 			return errorLine("truncated text string (need %d bytes)", length)
@@ -75,18 +85,18 @@ func (p *CborParser) ParseItem() []string {
 		p.Offset += length
 		annotation = fmt.Sprintf("TEXT: %q (%d %s)", 
 			str, length, pluralize(length, "byte", "bytes"))
-	case 4: // Array
+	case 4: // Array (RFC 8949 Section 3.2.2)
 		length = p.parseLength(info)
 		annotation = fmt.Sprintf("ARRAY (%d %s)", 
 			length, pluralize(length, "item", "items"))
-	case 5: // Map
+	case 5: // Map (RFC 8949 Section 3.2.3)
 		length = p.parseLength(info)
 		annotation = fmt.Sprintf("MAP (%d %s)", 
 			length, pluralize(length, "pair", "pairs"))
-	case 6: // Tag
+	case 6: // Tag (RFC 8949 Section 3.4)
 		tag := p.parseUint(info)
 		annotation = fmt.Sprintf("TAG (%d)", tag)
-	case 7: // Special
+	case 7: // Special values (RFC 8949 Section 3.3)
 		if info < 20 {
 			annotation = fmt.Sprintf("SIMPLE: %d", info)
 		} else {
@@ -100,13 +110,13 @@ func (p *CborParser) ParseItem() []string {
 	indent := strings.Repeat("    ", p.Depth)
 	lines = append(lines, fmt.Sprintf("%s%-20s # %s", indent, prefix, annotation))
 
-	// Recursively process nested structures
+	// Process nested structures recursively
 	if major == 4 || major == 5 || major == 6 {
 		p.Depth++
 		defer func() { p.Depth-- }()
 
 		switch major {
-		case 4: // Array: process array elements
+		case 4: // Array elements
 			for i := 0; i < length; i++ {
 				if p.Offset >= len(p.Data) {
 					lines = append(lines, errorLine("truncated array")...)
@@ -114,7 +124,7 @@ func (p *CborParser) ParseItem() []string {
 				}
 				lines = append(lines, p.ParseItem()...)
 			}
-		case 5: // Map: process key-value pairs
+		case 5: // Map key-value pairs
 			for i := 0; i < length*2; i++ {
 				if p.Offset >= len(p.Data) {
 					lines = append(lines, errorLine("truncated map")...)
@@ -122,7 +132,7 @@ func (p *CborParser) ParseItem() []string {
 				}
 				lines = append(lines, p.ParseItem()...)
 			}
-		case 6: // Tag: process tagged item
+		case 6: // Tagged item
 			if p.Offset < len(p.Data) {
 				lines = append(lines, p.ParseItem()...)
 			}
@@ -132,33 +142,34 @@ func (p *CborParser) ParseItem() []string {
 	return lines
 }
 
-// parseUint handles CBOR unsigned integer decoding with error checking
+// parseUint decodes CBOR unsigned integers with error checking
 func (p *CborParser) parseUint(info byte) uint64 {
-	if info < 24 {
+	if info < 24 { // Direct value (RFC 8949 Section 3.1)
 		return uint64(info)
 	}
+	
 	var val uint64
 	switch info {
-	case 24:
+	case 24: // 1-byte value
 		if p.Offset+1 > len(p.Data) {
 			return 0
 		}
 		val = uint64(p.Data[p.Offset])
 		p.Offset++
-	case 25:
+	case 25: // 2-byte value
 		if p.Offset+2 > len(p.Data) {
 			return 0
 		}
 		val = uint64(p.Data[p.Offset])<<8 | uint64(p.Data[p.Offset+1])
 		p.Offset += 2
-	case 26:
+	case 26: // 4-byte value
 		if p.Offset+4 > len(p.Data) {
 			return 0
 		}
 		val = uint64(p.Data[p.Offset])<<24 | uint64(p.Data[p.Offset+1])<<16 |
 			uint64(p.Data[p.Offset+2])<<8 | uint64(p.Data[p.Offset+3])
 		p.Offset += 4
-	case 27:
+	case 27: // 8-byte value
 		if p.Offset+8 > len(p.Data) {
 			return 0
 		}
@@ -171,38 +182,39 @@ func (p *CborParser) parseUint(info byte) uint64 {
 	return val
 }
 
-// parseNint calculates negative integers from CBOR's n = -1 - val encoding
+// parseNint calculates negative integers using n = -1 - val encoding
 func (p *CborParser) parseNint(info byte) int64 {
 	return -1 - int64(p.parseUint(info))
 }
 
-// parseLength handles length decoding for various CBOR data types with error checking
+// parseLength decodes length values for CBOR data structures
 func (p *CborParser) parseLength(info byte) int {
-	if info < 24 {
+	if info < 24 { // Direct length
 		return int(info)
 	}
+
 	var length int
 	switch info {
-	case 24:
+	case 24: // 1-byte length
 		if p.Offset+1 > len(p.Data) {
 			return 0
 		}
 		length = int(p.Data[p.Offset])
 		p.Offset++
-	case 25:
+	case 25: // 2-byte length
 		if p.Offset+2 > len(p.Data) {
 			return 0
 		}
 		length = int(p.Data[p.Offset])<<8 | int(p.Data[p.Offset+1])
 		p.Offset += 2
-	case 26:
+	case 26: // 4-byte length
 		if p.Offset+4 > len(p.Data) {
 			return 0
 		}
 		length = int(p.Data[p.Offset])<<24 | int(p.Data[p.Offset+1])<<16 |
 			int(p.Data[p.Offset+2])<<8 | int(p.Data[p.Offset+3])
 		p.Offset += 4
-	case 27:
+	case 27: // 8-byte length
 		if p.Offset+8 > len(p.Data) {
 			return 0
 		}
@@ -215,7 +227,7 @@ func (p *CborParser) parseLength(info byte) int {
 	return length
 }
 
-// isPrintable checks if a byte slice contains only printable ASCII characters
+// isPrintable checks if bytes contain only printable ASCII characters
 func isPrintable(b []byte) bool {
 	for _, c := range b {
 		if c > unicode.MaxASCII || !unicode.IsPrint(rune(c)) {
@@ -225,7 +237,7 @@ func isPrintable(b []byte) bool {
 	return true
 }
 
-// pluralize simplifies singular/plural formatting for annotations
+// pluralize returns singular or plural form based on count
 func pluralize(n int, singular, plural string) string {
 	if n == 1 {
 		return singular

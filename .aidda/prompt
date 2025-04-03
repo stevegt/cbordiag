@@ -7,11 +7,12 @@ Representation) data.  We can reference existing annotated diagnostic
 parsers in Ruby and Rust for inspiration.
 
 Next steps:  
-- fix the test cases 
-- fix any bugs in the code
-- add comments to the code
-- always return the complete file -- do not stub, summarize, or replace
-  code with comments
+- move most of cmd/cbordiag/main.go to a cbordiag.Parse() function
+- add test cases for the cbordiag.Parse() function
+- add more comments to the code
+
+Always return the complete file -- do not stub, summarize, or replace
+code with comments
 
 In: 
     cmd/cbordiag/main.go

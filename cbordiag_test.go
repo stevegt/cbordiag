@@ -100,10 +100,10 @@ func TestIsPrintable(t *testing.T) {
 	}{
 		{[]byte("Hello"), true},
 		{[]byte{0x01, 0x02}, false},
-		{[]byte("123\n"), false},       // Contains control character
+		{[]byte("123\n"), false},    // Contains control character
 		{[]byte("cafe"), true},
-		{[]byte{0x80, 0x81}, false},    // Non-ASCII bytes
-		{[]byte("π"), false},          // UTF-8 multi-byte character
+		{[]byte{0x80, 0x81}, false}, // Non-ASCII bytes
+		{[]byte("π"), false},        // UTF-8 multi-byte character
 	}
 
 	for _, tt := range tests {
