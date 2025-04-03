@@ -2,31 +2,35 @@ package main
 
 import (
 	"bufio"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
-	"strings"
+
+	"github.com/stevegt/cbordiag"
 )
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
-	data, _ := io.ReadAll(reader)
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
+		os.Exit(1)
+	}
 
 	if len(data) == 0 {
 		fmt.Println("No input data")
 		os.Exit(1)
 	}
 
-	parser := &cborParser{
-		data:   data,
-		offset: 0,
-		depth:  0,
+	parser := &cbordiag.CborParser{
+		Data:   data,
+		Offset: 0,
+		Depth:  0,
 	}
 
 	var output strings.Builder
-	for parser.offset < len(parser.data) {
-		lines := parser.parseItem()
+	for parser.Offset < len(parser.Data) {
+		lines := parser.ParseItem()
 		for _, line := range lines {
 			output.WriteString(line + "\n")
 		}

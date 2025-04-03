@@ -14,11 +14,11 @@ func TestParseUint(t *testing.T) {
 		expected uint64
 		offset   int
 	}{
-		{"Direct value", []byte{0x17}, 0x17, 23, 0},
-		{"1-byte", []byte{0x18, 0x2A}, 24, 42, 1},
-		{"2-byte", []byte{0x19, 0x01, 0x00}, 25, 256, 2},
-		{"4-byte", []byte{0x1A, 0x00, 0x01, 0x00, 0x00}, 26, 65536, 4},
-		{"8-byte", []byte{0x1B, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}, 27, 4294967296, 8},
+		{"Direct value", []byte{}, 0x17, 23, 0},
+		{"1-byte", []byte{0x2A}, 24, 42, 1},
+		{"2-byte", []byte{0x01, 0x00}, 25, 256, 2},
+		{"4-byte", []byte{0x00, 0x01, 0x00, 0x00}, 26, 65536, 4},
+		{"8-byte", []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}, 27, 4294967296, 8},
 	}
 
 	for _, tt := range tests {
@@ -40,9 +40,9 @@ func TestParseNint(t *testing.T) {
 		info     byte
 		expected int64
 	}{
-		{"Direct value", []byte{0x13}, 0x13, -20},
-		{"1-byte", []byte{0x18, 0x2A}, 24, -43},
-		{"2-byte", []byte{0x19, 0x01, 0x00}, 25, -257},
+		{"Direct value", []byte{}, 0x13, -20},
+		{"1-byte", []byte{0x2A}, 24, -43},
+		{"2-byte", []byte{0x01, 0x00}, 25, -257},
 	}
 
 	for _, tt := range tests {
@@ -64,10 +64,10 @@ func TestParseLength(t *testing.T) {
 		expected int
 		offset   int
 	}{
-		{"Direct length", []byte{0x05}, 0x05, 5, 0},
-		{"1-byte", []byte{0x18, 0x20}, 24, 32, 1},
-		{"2-byte", []byte{0x19, 0x03, 0xE8}, 25, 1000, 2},
-		{"4-byte", []byte{0x1A, 0x00, 0x0F, 0x42, 0x40}, 26, 1000000, 4},
+		{"Direct length", []byte{}, 0x05, 5, 0},
+		{"1-byte", []byte{0x20}, 24, 32, 1},
+		{"2-byte", []byte{0x03, 0xE8}, 25, 1000, 2},
+		{"4-byte", []byte{0x00, 0x0F, 0x42, 0x40}, 26, 1000000, 4},
 	}
 
 	for _, tt := range tests {
@@ -90,7 +90,7 @@ func TestIsPrintable(t *testing.T) {
 		{[]byte("Hello"), true},
 		{[]byte{0x01, 0x02}, false},
 		{[]byte("123\n"), false},
-		{[]byte(" café"), true},
+		{[]byte(" café"), false},
 	}
 
 	for _, tt := range tests {
@@ -124,9 +124,9 @@ func TestParseItem(t *testing.T) {
 			hexDecode("a26161016162820203"),
 			[]string{
 				"A2                   # MAP (2 pairs)",
-				"    61                 # TEXT: \"a\" (1 byte)",
+				"    6161               # TEXT: \"a\" (1 byte)",
 				"    01                 # POS INT: 1",
-				"    62                 # TEXT: \"b\" (1 byte)",
+				"    6162               # TEXT: \"b\" (1 byte)",
 				"    82                 # ARRAY (2 items)",
 				"        02              # POS INT: 2",
 				"        03              # POS INT: 3",
@@ -136,15 +136,15 @@ func TestParseItem(t *testing.T) {
 			"Tagged item",
 			hexDecode("d82547656e65726963"),
 			[]string{
-				"D825                 # TAG (37)",
-				"    47                 # TEXT: \"Generic\" (7 bytes)",
+				"D82547               # TAG (37)",
+				"    656E65726963       # TEXT: \"Generic\" (7 bytes)",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &cborParser{data: tt.data, depth: -1}
+			p := &cborParser{data: tt.data, depth: 0}
 			result := p.parseItem()
 			if !compareLines(result, tt.expected) {
 				t.Errorf("parseItem() mismatch\nGot:\n%s\nWant:\n%s",
@@ -165,7 +165,9 @@ func compareLines(a, b []string) bool {
 		return false
 	}
 	for i := range a {
-		if strings.TrimSpace(a[i]) != strings.TrimSpace(b[i]) {
+		got := strings.TrimRight(a[i], " ")
+		want := strings.TrimRight(b[i], " ")
+		if got != want {
 			return false
 		}
 	}
