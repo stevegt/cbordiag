@@ -1,0 +1,23 @@
+show diagnostic output with annotations
+
+We are writing a new tool to show diagnostic output with annotations.
+The tool will be called `cbordiag` and will be used to parse and
+display diagnostic information from CBOR (Concise Binary Object
+Representation) data.  We can reference existing annotated diagnostic
+parsers in Ruby and Rust for inspiration.
+
+Next steps:  
+- fix the test cases 
+- fix any bugs in the code
+- add comments to the code
+- always return the complete file -- do not stub, summarize, or replace
+  code with comments
+
+In: 
+    cmd/cbordiag/main.go
+    cbordiag.go
+    cbordiag_test.go
+Out: 
+    cmd/cbordiag/main.go
+    cbordiag.go
+    cbordiag_test.go
