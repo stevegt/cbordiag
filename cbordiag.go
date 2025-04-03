@@ -71,7 +71,6 @@ func (p *cborParser) parseItem() []string {
 		defer func() { p.depth-- }()
 	}
 
-	bytesUsed := p.offset - startOffset
 	prefixBytes := p.data[startOffset:p.offset]
 	prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
 
