@@ -14,6 +14,16 @@ type CborParser struct {
 	Depth  int    // Current nesting depth for indentation
 }
 
+// Annotate converts CBOR data to annotated diagnostic format
+func Annotate(data []byte) []string {
+	parser := &CborParser{
+		Data:   data,
+		Offset: 0,
+		Depth:  0,
+	}
+	return parser.Parse()
+}
+
 // Parse processes all CBOR items starting at current offset and returns
 // formatted diagnostic lines with proper indentation and annotations
 func (p *CborParser) Parse() []string {

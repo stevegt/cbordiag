@@ -24,13 +24,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	parser := &cbordiag.CborParser{
-		Data:   data,
-		Offset: 0,
-		Depth:  0,
-	}
-
 	// Parse entire input and join output lines
-	output := strings.Join(parser.Parse(), "\n")
+	output := strings.Join(cbordiag.Annotate(data), "\n")
 	fmt.Println(output)
 }

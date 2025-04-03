@@ -49,13 +49,7 @@ import (
 
 func main() {
     data := []byte{0x83, 0x01, 0x02, 0x03} // CBOR array [1,2,3]
-    parser := &cbordiag.CborParser{
-        Data:   data,
-        Offset: 0,
-        Depth:  0,
-    }
-    
-    diagnostics := parser.Parse()
+    diagnostics := cbordiag.Annotate(data)
     for _, line := range diagnostics {
         fmt.Println(line)
     }

@@ -6,6 +6,22 @@ import (
 	"testing"
 )
 
+func TestAnnotate(t *testing.T) {
+	data := hexDecode("83010203")
+	expected := []string{
+		"83                   # ARRAY (3 items)",
+		"    01                   # POS INT: 1",
+		"    02                   # POS INT: 2",
+		"    03                   # POS INT: 3",
+	}
+	result := Annotate(data)
+	if !compareLines(result, expected) {
+		t.Errorf("Annotate() mismatch\nGot:\n%s\nWant:\n%s",
+			strings.Join(result, "\n"),
+			strings.Join(expected, "\n"))
+	}
+}
+
 func TestParseUint(t *testing.T) {
 	tests := []struct {
 		name     string

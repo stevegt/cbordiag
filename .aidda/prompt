@@ -7,14 +7,24 @@ Representation) data.  We can reference existing annotated diagnostic
 parsers in Ruby and Rust for inspiration.
 
 Next steps:  
-- write a README.md with usage instructions for both CLI and library
+- add an Annotate(data []byte) function that create and calls the parser
+  and returns the annotated output
+- add a test for Annotate() in cbordiag_test.go
+- update cmd/cbordiag/main.go, README.md, and examples/simple/main.go
+  to call Annotate() instead of the parser 
 
 Always return the complete file -- do not stub, summarize, or replace
 code with comments
 
 In: 
+    README.md
+    examples/simple/main.go
     cmd/cbordiag/main.go
     cbordiag.go
     cbordiag_test.go
 Out: 
     README.md
+    examples/simple/main.go
+    cmd/cbordiag/main.go
+    cbordiag.go
+    cbordiag_test.go
