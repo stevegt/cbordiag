@@ -19,6 +19,11 @@ func TestParseUint(t *testing.T) {
 		{"2-byte", []byte{0x01, 0x00}, 25, 256, 2},
 		{"4-byte", []byte{0x00, 0x01, 0x00, 0x00}, 26, 65536, 4},
 		{"8-byte", []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}, 27, 4294967296, 8},
+		{"Max 8-byte", []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 27, 18446744073709551615, 8},
+		{"Truncated 1-byte", []byte{}, 24, 0, 0},
+		{"Truncated 2-byte", []byte{0x01}, 25, 0, 0},
+		{"Truncated 4-byte", []byte{0x00, 0x01, 0x00}, 26, 0, 0},
+		{"Truncated 8-byte", []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00}, 27, 0, 0},
 	}
 
 	for _, tt := range tests {
@@ -43,6 +48,8 @@ func TestParseNint(t *testing.T) {
 		{"Direct value", []byte{}, 0x13, -20},
 		{"1-byte", []byte{0x2A}, 24, -43},
 		{"2-byte", []byte{0x01, 0x00}, 25, -257},
+		{"4-byte", []byte{0x00, 0x01, 0x00, 0x00}, 26, -65537},
+		{"8-byte", []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}, 27, -4294967297},
 	}
 
 	for _, tt := range tests {
@@ -68,6 +75,10 @@ func TestParseLength(t *testing.T) {
 		{"1-byte", []byte{0x20}, 24, 32, 1},
 		{"2-byte", []byte{0x03, 0xE8}, 25, 1000, 2},
 		{"4-byte", []byte{0x00, 0x0F, 0x42, 0x40}, 26, 1000000, 4},
+		{"8-byte", []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}, 27, 4294967296, 8},
+		{"Truncated 1-byte", []byte{}, 24, 0, 0},
+		{"Truncated 2-byte", []byte{0x03}, 25, 0, 0},
+		{"Truncated 4-byte", []byte{0x00, 0x0F, 0x42}, 26, 0, 0},
 	}
 
 	for _, tt := range tests {
@@ -90,7 +101,9 @@ func TestIsPrintable(t *testing.T) {
 		{[]byte("Hello"), true},
 		{[]byte{0x01, 0x02}, false},
 		{[]byte("123\n"), false},
-		{[]byte(" café"), true}, // Contains non-ASCII but printable characters
+		{[]byte("cafe"), true},
+		{[]byte{0x80, 0x81}, false},
+		{[]byte("π"), false}, // UTF-8 encoded pi character (CE A0)
 	}
 
 	for _, tt := range tests {
@@ -145,6 +158,42 @@ func TestParseItem(t *testing.T) {
 			hexDecode("42"), // Length 2 but no data
 			[]string{
 				"42                   # ERROR: truncated byte string (need 2 bytes)",
+			},
+		},
+		{
+			"Printable byte string",
+			hexDecode("4568656c6c6f"),
+			[]string{
+				"4568656C6C6F         # BYTE STR: 'hello' (5 bytes)",
+			},
+		},
+		{
+			"Non-printable byte string",
+			hexDecode("4401020304"),
+			[]string{
+				"4401020304           # BYTE STR: h'01020304' (4 bytes)",
+			},
+		},
+		{
+			"Special values",
+			hexDecode("F413"),
+			[]string{
+				"F4                   # SIMPLE (RESERVED)",
+				"13                   # SIMPLE: 19",
+			},
+		},
+		{
+			"Truncated text string",
+			hexDecode("634162"),
+			[]string{
+				"634162               # ERROR: truncated text string (need 3 bytes)",
+			},
+		},
+		{
+			"Large unsigned int",
+			hexDecode("1BFFFFFFFFFFFFFFFF"),
+			[]string{
+				"1BFFFFFFFFFFFFFFFF   # POS INT: 18446744073709551615",
 			},
 		},
 	}
