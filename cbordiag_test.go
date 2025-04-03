@@ -100,10 +100,10 @@ func TestIsPrintable(t *testing.T) {
 	}{
 		{[]byte("Hello"), true},
 		{[]byte{0x01, 0x02}, false},
-		{[]byte("123\n"), false},
+		{[]byte("123\n"), false},       // Contains control character
 		{[]byte("cafe"), true},
-		{[]byte{0x80, 0x81}, false},
-		{[]byte("π"), false}, // UTF-8 encoded pi character (CE A0)
+		{[]byte{0x80, 0x81}, false},    // Non-ASCII bytes
+		{[]byte("π"), false},          // UTF-8 multi-byte character
 	}
 
 	for _, tt := range tests {
@@ -136,7 +136,7 @@ func TestParseItem(t *testing.T) {
 			"Nested map",
 			hexDecode("a26161016162820203"),
 			[]string{
-				"A26161016162820203   # MAP (2 pairs)",
+				"A2                   # MAP (2 pairs)",
 				"    6161                 # TEXT: \"a\" (1 byte)",
 				"    01                   # POS INT: 1",
 				"    6162                 # TEXT: \"b\" (1 byte)",

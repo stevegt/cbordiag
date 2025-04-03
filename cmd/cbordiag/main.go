@@ -10,6 +10,7 @@ import (
 	"github.com/stevegt/cbordiag"
 )
 
+// main reads CBOR data from stdin and outputs annotated diagnostic format
 func main() {
 	reader := bufio.NewReader(os.Stdin)
 	data, err := io.ReadAll(reader)

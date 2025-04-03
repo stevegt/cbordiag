@@ -7,14 +7,16 @@ import (
 	"unicode"
 )
 
+// CborParser maintains state for parsing CBOR data and generating diagnostics
 type CborParser struct {
-	Data   []byte
-	Offset int
-	Depth  int
+	Data   []byte     // Input CBOR data
+	Offset int        // Current read position in Data
+	Depth  int        // Current nesting depth for indentation
 }
 
 // ParseItem parses a single CBOR item starting at current offset and returns
-// the formatted diagnostic lines with proper indentation
+// the formatted diagnostic lines with proper indentation. Handles nested
+// structures by recursively parsing contained items.
 func (p *CborParser) ParseItem() []string {
 	if p.Offset >= len(p.Data) {
 		return []string{}
@@ -23,13 +25,14 @@ func (p *CborParser) ParseItem() []string {
 	startOffset := p.Offset
 	initial := p.Data[p.Offset]
 	p.Offset++
-	major := initial >> 5
-	info := initial & 0x1F
+	major := initial >> 5      // Extract major type (high 3 bits)
+	info := initial & 0x1F     // Extract additional info (low 5 bits)
 
 	var lines []string
 	var annotation, value string
 	var length int
 
+	// errorLine generates an error message line with truncated hex prefix
 	errorLine := func(msg string, args ...interface{}) []string {
 		prefixBytes := p.Data[startOffset:]
 		if len(prefixBytes) > 4 { // Truncate long prefixes for errors
@@ -41,6 +44,7 @@ func (p *CborParser) ParseItem() []string {
 		return []string{fmt.Sprintf("%s%-20s # ERROR: %s", indent, prefix, errMsg)}
 	}
 
+	// Handle major types
 	switch major {
 	case 0: // Unsigned integer
 		val := p.parseUint(info)
@@ -90,17 +94,19 @@ func (p *CborParser) ParseItem() []string {
 		}
 	}
 
+	// Generate prefix from consumed bytes
 	prefixBytes := p.Data[startOffset:p.Offset]
 	prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
 	indent := strings.Repeat("    ", p.Depth)
 	lines = append(lines, fmt.Sprintf("%s%-20s # %s", indent, prefix, annotation))
 
+	// Recursively process nested structures
 	if major == 4 || major == 5 || major == 6 {
 		p.Depth++
 		defer func() { p.Depth-- }()
 
 		switch major {
-		case 4:
+		case 4: // Array: process array elements
 			for i := 0; i < length; i++ {
 				if p.Offset >= len(p.Data) {
 					lines = append(lines, errorLine("truncated array")...)
@@ -108,7 +114,7 @@ func (p *CborParser) ParseItem() []string {
 				}
 				lines = append(lines, p.ParseItem()...)
 			}
-		case 5:
+		case 5: // Map: process key-value pairs
 			for i := 0; i < length*2; i++ {
 				if p.Offset >= len(p.Data) {
 					lines = append(lines, errorLine("truncated map")...)
@@ -116,7 +122,7 @@ func (p *CborParser) ParseItem() []string {
 				}
 				lines = append(lines, p.ParseItem()...)
 			}
-		case 6:
+		case 6: // Tag: process tagged item
 			if p.Offset < len(p.Data) {
 				lines = append(lines, p.ParseItem()...)
 			}
