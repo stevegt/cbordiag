@@ -176,10 +176,10 @@ func TestParseItem(t *testing.T) {
 		},
 		{
 			"Special values",
-			hexDecode("F413"),
+			hexDecode("F4F3"),
 			[]string{
 				"F4                   # SIMPLE (RESERVED)",
-				"13                   # SIMPLE: 19",
+				"F3                   # SIMPLE: 19",
 			},
 		},
 		{

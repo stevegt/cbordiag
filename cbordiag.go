@@ -33,7 +33,8 @@ func (p *CborParser) ParseItem() []string {
 		prefixBytes := p.Data[startOffset:p.Offset]
 		prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
 		indent := strings.Repeat("    ", p.Depth)
-		return []string{fmt.Sprintf("%s%-20s # ERROR: "+msg, indent, prefix, args...)}
+		errMsg := fmt.Sprintf(msg, args...)
+		return []string{fmt.Sprintf("%s%-20s # ERROR: %s", indent, prefix, errMsg)}
 	}
 
 	switch major {
