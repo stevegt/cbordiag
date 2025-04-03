@@ -13,6 +13,8 @@ type CborParser struct {
 	Depth  int
 }
 
+// ParseItem parses a single CBOR item starting at current offset and returns
+// the formatted diagnostic lines with proper indentation
 func (p *CborParser) ParseItem() []string {
 	if p.Offset >= len(p.Data) {
 		return []string{}
@@ -30,6 +32,9 @@ func (p *CborParser) ParseItem() []string {
 
 	errorLine := func(msg string, args ...interface{}) []string {
 		prefixBytes := p.Data[startOffset:]
+		if len(prefixBytes) > 4 { // Truncate long prefixes for errors
+			prefixBytes = prefixBytes[:4]
+		}
 		prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
 		indent := strings.Repeat("    ", p.Depth)
 		errMsg := fmt.Sprintf(msg, args...)
@@ -55,7 +60,8 @@ func (p *CborParser) ParseItem() []string {
 		} else {
 			value = fmt.Sprintf("h'%x'", bytes)
 		}
-		annotation = fmt.Sprintf("BYTE STR: %s (%d bytes)", value, length)
+		annotation = fmt.Sprintf("BYTE STR: %s (%d %s)", 
+			value, length, pluralize(length, "byte", "bytes"))
 	case 3: // Text string
 		length = p.parseLength(info)
 		if p.Offset+length > len(p.Data) {
@@ -63,13 +69,16 @@ func (p *CborParser) ParseItem() []string {
 		}
 		str := string(p.Data[p.Offset : p.Offset+length])
 		p.Offset += length
-		annotation = fmt.Sprintf("TEXT: %q (%d bytes)", str, length)
+		annotation = fmt.Sprintf("TEXT: %q (%d %s)", 
+			str, length, pluralize(length, "byte", "bytes"))
 	case 4: // Array
 		length = p.parseLength(info)
-		annotation = fmt.Sprintf("ARRAY (%d items)", length)
+		annotation = fmt.Sprintf("ARRAY (%d %s)", 
+			length, pluralize(length, "item", "items"))
 	case 5: // Map
 		length = p.parseLength(info)
-		annotation = fmt.Sprintf("MAP (%d pairs)", length)
+		annotation = fmt.Sprintf("MAP (%d %s)", 
+			length, pluralize(length, "pair", "pairs"))
 	case 6: // Tag
 		tag := p.parseUint(info)
 		annotation = fmt.Sprintf("TAG (%d)", tag)
@@ -117,6 +126,7 @@ func (p *CborParser) ParseItem() []string {
 	return lines
 }
 
+// parseUint handles CBOR unsigned integer decoding with error checking
 func (p *CborParser) parseUint(info byte) uint64 {
 	if info < 24 {
 		return uint64(info)
@@ -155,10 +165,12 @@ func (p *CborParser) parseUint(info byte) uint64 {
 	return val
 }
 
+// parseNint calculates negative integers from CBOR's n = -1 - val encoding
 func (p *CborParser) parseNint(info byte) int64 {
 	return -1 - int64(p.parseUint(info))
 }
 
+// parseLength handles length decoding for various CBOR data types with error checking
 func (p *CborParser) parseLength(info byte) int {
 	if info < 24 {
 		return int(info)
@@ -197,6 +209,7 @@ func (p *CborParser) parseLength(info byte) int {
 	return length
 }
 
+// isPrintable checks if a byte slice contains only printable ASCII characters
 func isPrintable(b []byte) bool {
 	for _, c := range b {
 		if c > unicode.MaxASCII || !unicode.IsPrint(rune(c)) {
@@ -204,4 +217,12 @@ func isPrintable(b []byte) bool {
 		}
 	}
 	return true
+}
+
+// pluralize simplifies singular/plural formatting for annotations
+func pluralize(n int, singular, plural string) string {
+	if n == 1 {
+		return singular
+	}
+	return plural
 }

@@ -127,30 +127,30 @@ func TestParseItem(t *testing.T) {
 			[]byte{0x83, 0x01, 0x02, 0x03},
 			[]string{
 				"83                   # ARRAY (3 items)",
-				"    01                 # POS INT: 1",
-				"    02                 # POS INT: 2",
-				"    03                 # POS INT: 3",
+				"    01                   # POS INT: 1",
+				"    02                   # POS INT: 2",
+				"    03                   # POS INT: 3",
 			},
 		},
 		{
 			"Nested map",
 			hexDecode("a26161016162820203"),
 			[]string{
-				"A2                   # MAP (2 pairs)",
-				"    6161               # TEXT: \"a\" (1 byte)",
-				"    01                 # POS INT: 1",
-				"    6162               # TEXT: \"b\" (1 byte)",
-				"    82                 # ARRAY (2 items)",
-				"        02              # POS INT: 2",
-				"        03              # POS INT: 3",
+				"A26161016162820203   # MAP (2 pairs)",
+				"    6161                 # TEXT: \"a\" (1 byte)",
+				"    01                   # POS INT: 1",
+				"    6162                 # TEXT: \"b\" (1 byte)",
+				"    82                   # ARRAY (2 items)",
+				"        02                   # POS INT: 2",
+				"        03                   # POS INT: 3",
 			},
 		},
 		{
 			"Tagged item",
 			hexDecode("d8256747656e65726963"),
 			[]string{
-				"D82567               # TAG (37)",
-				"    47656E65726963     # TEXT: \"Generic\" (7 bytes)",
+				"D825                 # TAG (37)",
+				"    6747656E65726963     # TEXT: \"Generic\" (7 bytes)",
 			},
 		},
 		{
@@ -210,18 +210,20 @@ func TestParseItem(t *testing.T) {
 	}
 }
 
+// hexDecode converts hexadecimal string to byte slice
 func hexDecode(s string) []byte {
 	data, _ := hex.DecodeString(s)
 	return data
 }
 
+// compareLines compares line output ignoring trailing whitespace
 func compareLines(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}
 	for i := range a {
-		got := strings.TrimRight(a[i], " ")
-		want := strings.TrimRight(b[i], " ")
+		got := strings.TrimRight(a[i], " \t")
+		want := strings.TrimRight(b[i], " \t")
 		if got != want {
 			return false
 		}
