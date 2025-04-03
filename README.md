@@ -65,8 +65,8 @@ echo a16568656c6c6f65776f726c64 | ./cbordiag -a hex
 Output:
 ```text
 a1                 # MAP (1 pair)
-   65 68656c6c6f   # TEXT: "hello" (5 bytes)
-   65 776f726c64   # TEXT: "world" (5 bytes)
+    65 68 65 6c 6c 6f   # TEXT: "hello" (5 bytes)
+    65 77 6f 72 6c 64   # TEXT: "world" (5 bytes)
 ```
 
 ## Options
