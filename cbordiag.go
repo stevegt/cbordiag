@@ -28,9 +28,8 @@ func (p *CborParser) ParseItem() []string {
 	var annotation, value string
 	var length int
 
-	// Helper to create error lines with hex prefix
 	errorLine := func(msg string, args ...interface{}) []string {
-		prefixBytes := p.Data[startOffset:p.Offset]
+		prefixBytes := p.Data[startOffset:]
 		prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
 		indent := strings.Repeat("    ", p.Depth)
 		errMsg := fmt.Sprintf(msg, args...)
@@ -82,39 +81,36 @@ func (p *CborParser) ParseItem() []string {
 		}
 	}
 
-	// Handle nesting for composite types
-	if major == 4 || major == 5 || major == 6 {
-		p.Depth++
-		defer func() { p.Depth-- }()
-	}
-
-	// Create main annotation line
 	prefixBytes := p.Data[startOffset:p.Offset]
 	prefix := strings.ToUpper(hex.EncodeToString(prefixBytes))
 	indent := strings.Repeat("    ", p.Depth)
 	lines = append(lines, fmt.Sprintf("%s%-20s # %s", indent, prefix, annotation))
 
-	// Process nested items
-	switch major {
-	case 4: // Array
-		for i := 0; i < length; i++ {
-			if p.Offset >= len(p.Data) {
-				lines = append(lines, errorLine("truncated array")...)
-				break
+	if major == 4 || major == 5 || major == 6 {
+		p.Depth++
+		defer func() { p.Depth-- }()
+
+		switch major {
+		case 4:
+			for i := 0; i < length; i++ {
+				if p.Offset >= len(p.Data) {
+					lines = append(lines, errorLine("truncated array")...)
+					break
+				}
+				lines = append(lines, p.ParseItem()...)
 			}
-			lines = append(lines, p.ParseItem()...)
-		}
-	case 5: // Map
-		for i := 0; i < length*2; i++ {
-			if p.Offset >= len(p.Data) {
-				lines = append(lines, errorLine("truncated map")...)
-				break
+		case 5:
+			for i := 0; i < length*2; i++ {
+				if p.Offset >= len(p.Data) {
+					lines = append(lines, errorLine("truncated map")...)
+					break
+				}
+				lines = append(lines, p.ParseItem()...)
 			}
-			lines = append(lines, p.ParseItem()...)
-		}
-	case 6: // Tag
-		if p.Offset < len(p.Data) {
-			lines = append(lines, p.ParseItem()...)
+		case 6:
+			if p.Offset < len(p.Data) {
+				lines = append(lines, p.ParseItem()...)
+			}
 		}
 	}
 

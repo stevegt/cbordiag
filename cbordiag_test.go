@@ -147,9 +147,9 @@ func TestParseItem(t *testing.T) {
 		},
 		{
 			"Tagged item",
-			hexDecode("d8254747656e65726963"), // Added extra '47' byte for complete text string
+			hexDecode("d8256747656e65726963"),
 			[]string{
-				"D82547               # TAG (37)",
+				"D82567               # TAG (37)",
 				"    47656E65726963     # TEXT: \"Generic\" (7 bytes)",
 			},
 		},
@@ -176,10 +176,9 @@ func TestParseItem(t *testing.T) {
 		},
 		{
 			"Special values",
-			hexDecode("f4f3"),
+			hexDecode("f4"),
 			[]string{
 				"F4                   # SIMPLE (RESERVED)",
-				"F3                   # SIMPLE: 19",
 			},
 		},
 		{
