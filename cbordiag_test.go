@@ -1,6 +1,8 @@
 package cbordiag
 
 import (
+	"encoding/hex"
+	"strings"
 	"testing"
 )
 
@@ -112,9 +114,9 @@ func TestParseItem(t *testing.T) {
 			[]byte{0x83, 0x01, 0x02, 0x03},
 			[]string{
 				"83                   # ARRAY (3 items)",
-				    01                 # POS INT: 1",
-			    02                 # POS INT: 2",
-			    03                 # POS INT: 3",
+				"    01                 # POS INT: 1",
+				"    02                 # POS INT: 2",
+				"    03                 # POS INT: 3",
 			},
 		},
 		{
@@ -122,12 +124,12 @@ func TestParseItem(t *testing.T) {
 			hexDecode("a26161016162820203"),
 			[]string{
 				"A2                   # MAP (2 pairs)",
-				   61                 # TEXT: \"a\" (1 byte)",
-				   01                 # POS INT: 1",
-				   62                 # TEXT: \"b\" (1 byte)",
-				   82                 # ARRAY (2 items)",
-				      02              # POS INT: 2",
-				      03              # POS INT: 3",
+				"    61                 # TEXT: \"a\" (1 byte)",
+				"    01                 # POS INT: 1",
+				"    62                 # TEXT: \"b\" (1 byte)",
+				"    82                 # ARRAY (2 items)",
+				"        02              # POS INT: 2",
+				"        03              # POS INT: 3",
 			},
 		},
 		{
@@ -135,7 +137,7 @@ func TestParseItem(t *testing.T) {
 			hexDecode("d82547656e65726963"),
 			[]string{
 				"D825                 # TAG (37)",
-				   47                 # TEXT: \"Generic\" (7 bytes)",
+				"    47                 # TEXT: \"Generic\" (7 bytes)",
 			},
 		},
 	}
